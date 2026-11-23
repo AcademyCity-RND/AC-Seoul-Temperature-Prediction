@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>AC-Seoul-Temperature-Prediction</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+
+    <style>
+        body { background: #f4f6fb; font-family: 'Nunito', sans-serif; }
+        .app-header {
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            color: #fff; padding: .9rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,.12);
+        }
+        .app-header .brand { font-size: 1.1rem; font-weight: 800; letter-spacing: .3px; }
+        .app-header .brand-badge {
+            background: rgba(255,255,255,.18); border-radius: .35rem;
+            padding: .15rem .5rem; font-size: .68rem; font-weight: 700;
+            margin-left: .5rem; vertical-align: middle;
+        }
+        .app-header .meta { font-size: .75rem; opacity: .85; }
+        .app-footer {
+            background: #fff; border-top: 1px solid #e3e6f0;
+            padding: .7rem 0; margin-top: 1.2rem;
+            font-size: .72rem; color: #858796; text-align: center;
+        }
+        .section-title {
+            font-size: .78rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .5px; color: #4e73df;
+            border-left: 3px solid #4e73df; padding-left: .5rem;
+            margin: .9rem 0 .55rem;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: .65rem;
+        }
+        .input-grid label { font-size: .7rem; line-height: 1.2; margin-bottom: .2rem; }
+        .input-grid input { font-size: .78rem; padding: .3rem .5rem; height: auto; }
+        .seoul-strip {
+            background: #edf2ff; border: 1px solid #d5def5; border-radius: .5rem;
+            padding: .55rem .8rem; font-size: .76rem; color: #3a4a75;
+        }
+        .seoul-strip strong { color: #224abe; }
+    </style>
+</head>
+
+<body id="page-top">
+
+    <!-- ===== HEADER ===== -->
+    <header class="app-header">
+        <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between">
+            <div>
+                <span class="brand">AC <span class="font-weight-normal">/</span> Seoul Temperature Prediction</span>
+                <span class="brand-badge">SEOUL · KOREA SELATAN</span>
+            </div>
+            <div class="meta text-right">Tugas Praktikum Penambangan Data</div>
+        </div>
+    </header>
+
+    <div class="container-fluid py-3">
+
+        <div class="d-sm-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h1 class="h4 mb-1 text-gray-800 font-weight-bold">Prediksi Suhu Maksimum Esok Hari</h1>
+                <p class="mb-0 text-muted small">Masukkan 21 variabel cuaca Seoul, atau gunakan Import CSV.</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            {{ messages[0] }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+
+                <div class="seoul-strip mb-3">
+                    <strong>📍 Lokasi studi: Seoul, Korea Selatan</strong> —
+                    koordinat ≈ 37.5665° N, 126.9780° E ·
+                    model dilatih pada dataset UCI ID 514 (Cho et al., 2020) untuk memprediksi
+                    <strong>Next_Tmax</strong> (suhu maksimum esok hari).
+                </div>
+
+                <div class="card shadow mb-3">
+                    <div class="card-header py-2 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">Input Data Cuaca (21 Fitur)</h6>
+                        <div class="dropdown no-arrow">
+                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="importDropdown"
+                                data-toggle="dropdown">
+                                <i class="fas fa-file-import mr-1"></i> Import CSV
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
+                                <a class="dropdown-item" href="#"
+                                   onclick="document.getElementById('csvFile').click(); return false;">
+                                    Pilih file CSV &rarr; Terapkan ke Form
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item small text-muted" href="#" id="tplLink">
+                                    Unduh contoh format CSV
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body pt-2">
+                        <form id="weatherForm" action="/predict" method="POST">
+
+                            <div class="section-title">Suhu &amp; Kelembapan Udara</div>
+                            <div class="input-grid">
+                                {% for fn in feature_names[0:6] %}
+                                <div>
+                                    <label class="small font-weight-bold text-muted" for="{{ fn }}">
+                                        {{ labels.get(fn, fn) }}
+                                        <span class="font-weight-normal text-secondary">({{ fn }})</span>
+                                    </label>
+                                    <input type="number" step="any" name="{{ fn }}" id="{{ fn }}"
+                                        class="form-control form-control-sm" placeholder="contoh: 0.00" required>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="section-title">Angin, Panas Laten, Tutupan Awan &amp; Curah Hujan</div>
+                            <div class="input-grid">
+                                {% for fn in feature_names[6:16] %}
+                                <div>
+                                    <label class="small font-weight-bold text-muted" for="{{ fn }}">
+                                        {{ labels.get(fn, fn) }}
+                                        <span class="font-weight-normal text-secondary">({{ fn }})</span>
+                                    </label>
+                                    <input type="number" step="any" name="{{ fn }}" id="{{ fn }}"
+                                        class="form-control form-control-sm" placeholder="contoh: 0.00" required>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="section-title">Geografi &amp; Radiasi Matahari</div>
+                            <div class="input-grid">
+                                {% for fn in feature_names[16:21] %}
+                                <div>
+                                    <label class="small font-weight-bold text-muted" for="{{ fn }}">
+                                        {{ labels.get(fn, fn) }}
+                                        <span class="font-weight-normal text-secondary">({{ fn }})</span>
+                                    </label>
+                                    <input type="number" step="any" name="{{ fn }}" id="{{ fn }}"
+                                        class="form-control form-control-sm" placeholder="contoh: 0.00" required>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mt-3 text-right">
+                                <button type="button" class="btn btn-warning mr-2" onclick="resetForm()">
+                                    <i class="fas fa-undo mr-1"></i> Reset
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-cloud-sun mr-1"></i> Prediksi Suhu Esok Hari
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <input type="file" id="csvFile" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="app-footer">
+        <div class="container-fluid">
+            AC-Seoul-Temperature-Prediction · Random Forest Regressor (R² = 0.8942) · Dataset UCI ID 514
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+
+    <script>
+        const exampleRow = [
+            28.7, 21.4, 58.3, 91.1, 28.1, 23.0, 6.8, 69.5,
+            0.37, 0.36, 0.32, 0.30, 0.59, 0.49, 0.28, 0.27,
+            37.60, 126.99, 212.3, 2.79, 5992.9
+        ];
+
+        document.getElementById('tplLink').addEventListener('click', function (e) {
+            e.preventDefault();
+            const headers = {{ feature_names|safe }};
+            const csv = [headers.join(','), exampleRow.join(',')].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'contoh_input_cuaca.csv'; a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length < 2) return null;
+            const headers = lines[0].split(',').map(h => h.trim());
+            const firstRow = lines[1].split(',').map(v => v.trim());
+            const result = {};
+            headers.forEach((h, i) => { result[h] = firstRow[i] !== undefined ? firstRow[i] : ''; });
+            return { headers, result };
+        }
+
+        document.getElementById('csvFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                const parsed = parseCSV(evt.target.result);
+                if (!parsed) { alert('CSV kosong atau tidak valid.'); return; }
+                const missing = parsed.headers.filter(h => !{{ feature_names|safe }}.includes(h));
+                if (missing.length > 0) { alert('Kolom tidak dikenal: ' + missing.join(', ')); return; }
+                {{ feature_names|safe }}.forEach(fn => {
+                    const el = document.getElementById(fn);
+                    if (el && parsed.result[fn] !== undefined) el.value = parsed.result[fn];
+                });
+                alert('Berhasil diimpor: ' + parsed.headers.length + ' kolom terdeteksi, ' +
+                    Object.values(parsed.result).filter(v => v !== '').length + ' nilai terisi.');
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        function resetForm() { document.getElementById('weatherForm').reset(); }
+    </script>
+</body>
+</html>
